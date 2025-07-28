@@ -15,19 +15,11 @@ import strands.tools
 
 console = Console()
 
-boto_session = Session()
-region = boto_session.region_name
-
-client = BrowserClient(region)
-client.start()
-
-# Extract ws_url and headers
-ws_url, headers = client.generate_ws_headers()
-
 app = BedrockAgentCoreApp()
 
+
 @tool
-async def run_browser_task(browser_session: BrowserSession, bedrock_chat: ChatAnthropicBedrock, task: str) -> None:
+async def run_browser_task(bedrock_chat: ChatAnthropicBedrock, task: str) -> None:
     """
     Run a browser automation task using browser_use
 
@@ -36,57 +28,18 @@ async def run_browser_task(browser_session: BrowserSession, bedrock_chat: ChatAn
         bedrock_chat: Bedrock chat model instance
         task: Natural language task for the agent
     """
+    # Extract ws_url and headers
+    ws_url, headers = client.generate_ws_headers()
+
+    boto_session = Session()
+    region = boto_session.region_name
+
+    client = BrowserClient(region)
+    client.start()
     try:
         # Show task execution
         console.print(f"\n[bold blue]🤖 Executing task:[/bold blue] {task}")
 
-        # Create and run the agent
-        browser_use_agent = BrowserUseAgent(
-            task=task,
-            llm=bedrock_chat,
-            browser_session=browser_session
-        )
-
-        # Run with progress indicator
-        with console.status("[bold green]Running browser automation...[/bold green]", spinner="dots"):
-            await browser_use_agent.run()
-
-        console.print(
-            "[bold green]✅ Task completed successfully![/bold green]")
-
-    except Exception as e:
-        console.print(
-            f"[bold red]❌ Error during task execution:[/bold red] {str(e)}")
-        import traceback
-        if console.is_terminal:
-            traceback.print_exc()
-
-
-async def run_strands_task(task: str):
-    """
-    Run a strands agent task
-    """
-    console.print(f"\n[bold blue]🤖 Executing Strands task:[/bold blue] {task}")
-    strands_agent = StrandsAgent(
-        model="us.anthropic.claude-sonnet-4-20250514-v1:0",
-        tools=[calculator, current_time, run_browser_task],
-        system_prompt="You are a helpful assistant."
-    )
-    # Run the synchronous agent call in a separate thread
-    response = await asyncio.to_thread(strands_agent, task)
-    console.print(
-        "[bold green]✅ Strands Task completed successfully![/bold green]")
-    console.print(f"[bold cyan]Response:[/bold cyan] {response.message}")
-
-
-async def main():
-    """
-    Main function to initialize and run the browser task
-    """
-    # Create persistent browser session and model
-    browser_session = None
-
-    try:
         # Create browser profile with headers
         browser_profile = BrowserProfile(
             headers=headers,
@@ -111,13 +64,25 @@ async def main():
         console.print(
             "[green]✅ Browser session initialized and ready for tasks[/green]\n")
 
-        # Modify the task to run other tasks
-        task = "Search for a coffee maker on amazon.com and extract details of the first one"
+        # Create and run the agent
+        browser_use_agent = BrowserUseAgent(
+            task=task,
+            llm=bedrock_chat,
+            browser_session=browser_session
+        )
 
-        await run_browser_task(browser_session, llm, task)
+        # Run with progress indicator
+        with console.status("[bold green]Running browser automation...[/bold green]", spinner="dots"):
+            await browser_use_agent.run()
 
-        strands_task = "What is the current time and what is 24 * 7?"
-        await run_strands_task(strands_task)
+        console.print(
+            "[bold green]✅ Task completed successfully![/bold green]")
+    except Exception as e:
+        console.print(
+            f"[bold red]❌ Error during task execution:[/bold red] {str(e)}")
+        import traceback
+        if console.is_terminal:
+            traceback.print_exc()
 
     finally:
         # Close the browser session
@@ -130,6 +95,29 @@ async def main():
     client.stop()  # Stop the browser client
     console.print("[green]✅ Browser client stopped[/green]")
 
+
+@app.entrypoint
+def run_strands_agentcore(payload, context):
+    """
+    Run a strands agent task
+    """
+    console.print(
+        f"\n[bold blue]🤖 Starting a strands agent:[/bold blue] {payload}")
+    user_message = payload.get(
+        "prompt", "No prompt found in input, please guide customer to create a json payload with prompt key.")
+
+    strands_agent = StrandsAgent(
+        model="us.anthropic.claude-sonnet-4-20250514-v1:0",
+        tools=[run_browser_task],
+        system_prompt="You are a helpful assistant with an ability to run browser automation tasks."
+    )
+    # Run the synchronous agent call in a separate thread
+    response = strands_agent(user_message)
+    console.print(
+        "[bold green]✅ Strands Task completed successfully![/bold green]")
+    console.print(f"[bold cyan]Response:[/bold cyan] {response.message}")
+
+
 if __name__ == "__main__":
     # Run the main function with asyncio
-    asyncio.run(main())
+    app.run()
