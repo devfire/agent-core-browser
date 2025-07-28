@@ -5,7 +5,6 @@ from browser_use import Agent as BrowserUseAgent
 from browser_use.browser.session import BrowserSession
 from browser_use.browser import BrowserProfile
 from browser_use.llm import ChatAnthropicBedrock
-# from langchain_aws import ChatBedrockConverse
 from rich.console import Console
 from contextlib import suppress
 import asyncio
@@ -19,23 +18,23 @@ app = BedrockAgentCoreApp()
 
 
 @tool
-async def run_browser_task(bedrock_chat: ChatAnthropicBedrock, task: str) -> None:
+async def run_browser_task(task: str) -> None:
     """
-    Run a browser automation task using browser_use
+    Run a browser automation task
 
     Args:
-        browser_session: Existing browser session to reuse
-        bedrock_chat: Bedrock chat model instance
         task: Natural language task for the agent
     """
-    # Extract ws_url and headers
-    ws_url, headers = client.generate_ws_headers()
 
     boto_session = Session()
     region = boto_session.region_name
 
     client = BrowserClient(region)
     client.start()
+
+    # Extract ws_url and headers
+    ws_url, headers = client.generate_ws_headers()
+
     try:
         # Show task execution
         console.print(f"\n[bold blue]🤖 Executing task:[/bold blue] {task}")
@@ -50,7 +49,7 @@ async def run_browser_task(bedrock_chat: ChatAnthropicBedrock, task: str) -> Non
         browser_session = BrowserSession(
             cdp_url=ws_url,
             browser_profile=browser_profile,
-            keep_alive=True  # Keep browser alive between tasks
+            keep_alive=False  # Keep browser alive between tasks
         )
 
         # Initialize the browser session
@@ -67,7 +66,7 @@ async def run_browser_task(bedrock_chat: ChatAnthropicBedrock, task: str) -> Non
         # Create and run the agent
         browser_use_agent = BrowserUseAgent(
             task=task,
-            llm=bedrock_chat,
+            llm=llm,
             browser_session=browser_session
         )
 
