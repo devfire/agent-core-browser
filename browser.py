@@ -8,6 +8,8 @@ from browser_use.llm import ChatAnthropicBedrock
 from rich.console import Console
 from contextlib import suppress
 import asyncio
+import os
+os.environ["ANONYMIZED_TELEMETRY"] = "false"
 
 from strands import Agent as StrandsAgent, tool
 import strands.tools
