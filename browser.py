@@ -20,7 +20,7 @@ app = BedrockAgentCoreApp()
 
 
 @tool
-async def run_browser_task(task: str) -> None:
+async def run_browser_task(task: str) -> str:
     """
     Run a browser automation task
 
@@ -74,7 +74,7 @@ async def run_browser_task(task: str) -> None:
 
         # Run with progress indicator
         with console.status("[bold green]Running browser automation...[/bold green]", spinner="dots"):
-            await browser_use_agent.run()
+            result = await browser_use_agent.run()
 
         console.print(
             "[bold green]✅ Task completed successfully![/bold green]")
@@ -95,6 +95,8 @@ async def run_browser_task(task: str) -> None:
 
     client.stop()  # Stop the browser client
     console.print("[green]✅ Browser client stopped[/green]")
+    
+    return result
 
 
 @app.entrypoint
