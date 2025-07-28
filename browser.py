@@ -1,6 +1,7 @@
 from boto3.session import Session
 from bedrock_agentcore.tools.browser_client import BrowserClient
-from browser_use import Agent
+from bedrock_agentcore.runtime import BedrockAgentCoreApp
+from browser_use import Agent as BrowserUseAgent
 from browser_use.browser.session import BrowserSession
 from browser_use.browser import BrowserProfile
 from browser_use.llm import ChatAnthropicBedrock
@@ -8,6 +9,9 @@ from browser_use.llm import ChatAnthropicBedrock
 from rich.console import Console
 from contextlib import suppress
 import asyncio
+
+from strands import Agent as StrandsAgent, tool
+import strands.tools
 
 console = Console()
 
@@ -20,7 +24,9 @@ client.start()
 # Extract ws_url and headers
 ws_url, headers = client.generate_ws_headers()
 
+app = BedrockAgentCoreApp()
 
+@tool
 async def run_browser_task(browser_session: BrowserSession, bedrock_chat: ChatAnthropicBedrock, task: str) -> None:
     """
     Run a browser automation task using browser_use
@@ -35,7 +41,7 @@ async def run_browser_task(browser_session: BrowserSession, bedrock_chat: ChatAn
         console.print(f"\n[bold blue]🤖 Executing task:[/bold blue] {task}")
 
         # Create and run the agent
-        agent = Agent(
+        browser_use_agent = BrowserUseAgent(
             task=task,
             llm=bedrock_chat,
             browser_session=browser_session
@@ -43,7 +49,7 @@ async def run_browser_task(browser_session: BrowserSession, bedrock_chat: ChatAn
 
         # Run with progress indicator
         with console.status("[bold green]Running browser automation...[/bold green]", spinner="dots"):
-            await agent.run()
+            await browser_use_agent.run()
 
         console.print(
             "[bold green]✅ Task completed successfully![/bold green]")
@@ -54,6 +60,23 @@ async def run_browser_task(browser_session: BrowserSession, bedrock_chat: ChatAn
         import traceback
         if console.is_terminal:
             traceback.print_exc()
+
+
+async def run_strands_task(task: str):
+    """
+    Run a strands agent task
+    """
+    console.print(f"\n[bold blue]🤖 Executing Strands task:[/bold blue] {task}")
+    strands_agent = StrandsAgent(
+        model="us.anthropic.claude-sonnet-4-20250514-v1:0",
+        tools=[calculator, current_time, run_browser_task],
+        system_prompt="You are a helpful assistant."
+    )
+    # Run the synchronous agent call in a separate thread
+    response = await asyncio.to_thread(strands_agent, task)
+    console.print(
+        "[bold green]✅ Strands Task completed successfully![/bold green]")
+    console.print(f"[bold cyan]Response:[/bold cyan] {response.message}")
 
 
 async def main():
@@ -92,6 +115,9 @@ async def main():
         task = "Search for a coffee maker on amazon.com and extract details of the first one"
 
         await run_browser_task(browser_session, llm, task)
+
+        strands_task = "What is the current time and what is 24 * 7?"
+        await run_strands_task(strands_task)
 
     finally:
         # Close the browser session
