@@ -8,7 +8,6 @@ dependencies = [
     "bedrock-agentcore>=0.1.1",
     "bedrock-agentcore-starter-toolkit>=0.1.2",
     "browser-use>=0.5.5",
-    "langchain-aws>=0.2.29",
     "rich>=14.1.0",
     "strands-agents-tools>=0.0.1",
 ]

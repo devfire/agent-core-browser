@@ -108,7 +108,6 @@ This endpoint returns a randomly generated UUID in JSON format, and I successful
 
 -   `bedrock-agentcore`: For managing the browser client and creating the web service.
 -   `browser-use`: For browser automation with LLMs.
--   `langchain-aws`: For interacting with Bedrock models.
 -   `rich`: For pretty-printing console output.
 -   `strands`: For creating the main agent and managing tools.
 
