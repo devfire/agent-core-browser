@@ -1,6 +1,6 @@
 # Agent Core Browser
 
-This project demonstrates how to use the `bedrock-agentcore` and `browser-use` libraries to perform browser automation tasks using natural language.
+This project demonstrates how to use the `bedrock-agentcore` and `browser-use` to perform browser automation tasks using natural language, exposed as a `AgentCore` service.
 
 ## Getting Started
 
@@ -53,37 +53,63 @@ You will also need to have Python 3.11 or higher installed.
 
 ### Usage
 
-The main script `browser.py` initializes a browser session and runs a predefined task.
+The main script `browser.py` runs a web service that exposes the browser automation agent.
 
-To run the script:
+To run the service:
 
 ```bash
 python browser.py
 ```
 
-The default task is to "Search for a coffee maker on amazon.com and extract details of the first one". You can modify the `task` variable in `browser.py` to perform different actions:
+This will start a local server. You can then send requests to it to perform browser tasks.
 
-```python
-# in browser.py, line 87
-task = "Your new browser task here"
+### Invoking the service
+
+You can use `curl` to send a prompt to the agent. The agent will then execute the browser task based on the prompt.
+
+```bash
+curl -X POST http://localhost:8080/invocations \
+-H "Content-Type: application/json" \
+-d '{"prompt": "Get me the uuid from the https://httpbin.org/uuid"}'
 ```
 
-## How It Works
+Expected output:
+
+```
+✅ Task completed successfully!
+
+🔌 Closing browser session...
+✅ Browser session closed
+
+INFO     [bedrock_agentcore.tools.browser_client] Stopping browser session...
+✅ Browser client stopped
+
+The UUID from https://httpbin.org/uuid is: **dbd39a94-fddc-44d7-b0f2-3a9d99785087**
+
+This endpoint returns a randomly generated UUID in JSON format, and I successfully extracted the UUID value for you.
+✅ Strands Task completed successfully!
+
+```
+### How It Works
 
 -   **`browser.py`**: The entry point of the application.
-    -   It initializes a `BrowserClient` from `bedrock-agentcore` to manage the browser lifecycle.
-    -   It uses `browser-use` to create and manage a persistent browser session.
-    -   An `Agent` from `browser-use` is created with a natural language task.
+    -   It uses `BedrockAgentCoreApp` to create a web service.
+    -   The `@app.entrypoint` decorator on `run_strands_agentcore` exposes it as the main endpoint.
+    -   It initializes a `StrandsAgent` from the `strands` library.
+    -   The `run_browser_task` function is defined as a tool that the `StrandsAgent` can use.
+    -   Inside `run_browser_task`, it initializes a `BrowserClient` from `bedrock-agentcore` to manage the browser lifecycle.
+    -   It uses `browser-use` to create and manage a persistent browser session for the automation task.
+    -   An `Agent` from `browser-use` is created with a natural language task passed from the `StrandsAgent`.
     -   The agent uses a `ChatAnthropicBedrock` model to understand and execute the task.
 -   **`pyproject.toml`**: Defines the project metadata and dependencies.
 -   **`uv.lock`**: A lock file for reproducible builds.
 
 ## Dependencies
 
--   `bedrock-agentcore`: For managing the browser client.
+-   `bedrock-agentcore`: For managing the browser client and creating the web service.
 -   `browser-use`: For browser automation with LLMs.
--   `langchain-aws`: For interacting with Bedrock models.
 -   `rich`: For pretty-printing console output.
+-   `strands`: For creating the main agent and managing tools.
 
 ## Contributing
 
